@@ -15,7 +15,7 @@ import statistics
 import re
 
 def data_preprocessing(train_df):
-    
+
     my_stop_words = list(stopwords.words('english')) 
 
     #remove outliers
@@ -37,7 +37,7 @@ def data_preprocessing(train_df):
     # Apply the function to remove tags
     train_df['description'] = train_df.apply(lambda row: remove_tags(row['description']),axis=1)
 
-    #tf_idf(train_df, my_stop_words)
+    #train_df = tf_idf(train_df, my_stop_words)
     
     return train_df
 
@@ -142,7 +142,9 @@ def tf_idf(train_df, my_stop_words):
             mean_val_list.append(0.0)
 
     train_df['mean_des_tdidf'] = mean_val_list
-    print(train_df)
+    # print(train_df)
+
+    return train_df
 
     
     
