@@ -13,16 +13,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
 import statistics
 import re
-
-from sklearn.model_selection import KFold
-from sklearn.tree import DecisionTreeClassifier # Import Decision Tree Classifier
-from sklearn.model_selection import train_test_split # Import train_test_split function
-from sklearn import metrics #Import scikit-learn metrics module for accuracy calculation
-from sklearn.metrics import log_loss
 import scipy
-from sklearn.model_selection import cross_val_score
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.feature_selection import SelectKBest, f_classif
 
 
 def data_preprocessing(train_df):
