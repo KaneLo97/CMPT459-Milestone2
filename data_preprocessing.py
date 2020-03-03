@@ -17,8 +17,7 @@ import scipy
 
 
 def data_preprocessing(train_df):
-    my_stop_words = list(stopwords.words('english'))
-
+ 
     #remove outliers
     train_df = train_df[train_df['bathrooms'] != 10.0]
     train_df = train_df[(train_df['latitude'] != 34.0126) | (train_df['latitude'] != 0)]
@@ -34,9 +33,7 @@ def data_preprocessing(train_df):
 
     # Apply the function to remove tags
     train_df['description'] = train_df.apply(lambda row: remove_tags(row['description']),axis=1)
-
-    train_df = tf_idf(train_df, my_stop_words)
-
+    
     return train_df
 #
 def missing_addr(row):
@@ -196,6 +193,9 @@ def additionalFeatures(df):
     df["created_month"] = df["created"].dt.month
     df["created_day"] = df["created"].dt.day
     df['photos_num'] = df['photos'].apply(len)
+    
+    my_stop_words = list(stopwords.words('english'))
+    df= tf_idf(df, my_stop_words)
 
 
     return df
