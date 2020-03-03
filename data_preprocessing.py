@@ -195,7 +195,7 @@ def additionalFeatures(df):
     df['photos_num'] = df['photos'].apply(len)
     
     my_stop_words = list(stopwords.words('english'))
-    df= tf_idf(train_df, my_stop_words)
+    df= tf_idf(df, my_stop_words)
 
 
     return df
