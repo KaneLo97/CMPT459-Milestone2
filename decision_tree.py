@@ -26,9 +26,6 @@ def decision_tree_classifier(train_df, test_df):
     y = train_df.interest_level # Target variable
     X_test = test_df[feature_cols]
 
-    
-    # X_train, X_validation, y_train, y_validation = train_test_split(x, y, test_size=0.3, random_state=1) # 70% training and 30% test
-
     training_scores = []
     validation_scores = []
     training_logloss = []
@@ -52,31 +49,14 @@ def decision_tree_classifier(train_df, test_df):
         training_logloss.append(decision_tree.score(X_train, y_train))
         validation_scores.append(metrics.accuracy_score(y_validation, y_pred))
         validation_logloss.append(log_loss(y_validation, y_pred1))
-        # scores3.append((log_loss(y_validation, y_pred1), X_train, y_train, X_validation, y_validation))
 
-    #check overfitting
+    #check overfitting and performance
     print('Scores from each Iteration: ', training_scores)
     print('Scores from each Iteration: ', validation_scores)
     print('Average k-fold on training: ', np.mean(training_scores))
     print('Average k-fold on testing: ', np.mean(validation_scores))
-    print('Improved Average k-fold on training using logloss: ', np.mean(validation_logloss))
-    print('Improved Average k-fold on validation using logloss: ', np.mean(training_logloss))
-
-
-    # results = cross_val_score(decision_tree, x, y, cv = 5, scoring = "accuracy")
-    # print (results)
-    # print(np.mean(results))
-
-
-    # min_log_loss = min(scores3)
-    # X_train = min_log_loss[1]
-    # y_train = min_log_loss[2]
-    # X_validation = min_log_loss[3]
-    # y_validation = min_log_loss[4]
-
-    #print("Min log loss", min_log_loss[0])
-    # print("x_train", X_train)
-    # print("y_train", y_train)
+    print('Average k-fold on training using logloss: ', np.mean(training_logloss))
+    print('Average k-fold on validation using logloss: ', np.mean(validation_logloss))
 
     #train classifier
     decision_tree = decision_tree.fit(x,y)
@@ -92,7 +72,7 @@ def decision_tree_classifier(train_df, test_df):
 
     titles_columns=["listing_id","high","medium","low"]
     submission=submission.reindex(columns=titles_columns)
-    submission.to_csv('initial_submission.csv', index=False)
+    submission.to_csv('initial_decision_tree_submission.csv', index=False)
 
 def improved_decision_tree_classifier(train_df, test_df):
     feature_cols = ['bedrooms','bathrooms','price', 'latitude', 'mean_des_tdidf', 'length_description', 'created_hour', 'closest_station', 'closest_hospital', 'mean_feature_tdidf', 'created_day','photos_num']
@@ -147,10 +127,8 @@ def improved_decision_tree_classifier(train_df, test_df):
     print('Scores from each Iteration: ', validation_scores)
     print('Improved Average k-fold on training: ', np.mean(training_scores))
     print('Improved Average k-fold on validation: ', np.mean(validation_scores))
-    print('Improved Average k-fold on training using logloss: ', np.mean(validation_logloss))
-    print('Improved Average k-fold on validation using logloss: ', np.mean(training_logloss))
-
-
+    print('Improved Average k-fold on training using logloss: ', np.mean(training_logloss))
+    print('Improved Average k-fold on validation using logloss: ', np.mean(validation_logloss))
 
     #retrain classifier on the whole dataset
     decision_tree = decision_tree.fit(x,y)
@@ -166,7 +144,7 @@ def improved_decision_tree_classifier(train_df, test_df):
 
     titles_columns=["listing_id","high","medium","low"]
     submission=submission.reindex(columns=titles_columns)
-    submission.to_csv('improved_submission.csv', index=False)
+    submission.to_csv('improved_decision_tree_submission.csv', index=False)
 
 def feature_Selection(train_df):
     cols = ['bedrooms', 'bathrooms', 'latitude', 
@@ -215,10 +193,6 @@ def main():
     # train_df = pd.read_json('train.json.zip')
     # test_df = pd.read_json('test.json.zip')
 
-
-    # train_df = data_preprocessing(train_df)
-    # train_df = additionalFeatures(train_df)
-    # test_df = additionalFeatures(test_df)
 
     feature_Selection(train_df)
     decision_tree_classifier(train_df, test_df)
