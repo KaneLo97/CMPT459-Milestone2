@@ -130,8 +130,6 @@ def improved_decision_tree_classifier(train_df, test_df):
     print('Improved Average k-fold on training using logloss: ', np.mean(validation_logloss))
     print('Improved Average k-fold on validation using logloss: ', np.mean(training_logloss))
 
-
-
     #retrain classifier on the whole dataset
     decision_tree = decision_tree.fit(x,y)
 
@@ -196,17 +194,11 @@ def main():
     # test_df = pd.read_json('test.json.zip')
 
 
-    # train_df = data_preprocessing(train_df)
-    # train_df = additionalFeatures(train_df)
-    # test_df = additionalFeatures(test_df)
-
     feature_Selection(train_df)
     decision_tree_classifier(train_df, test_df)
 
     new_feature_Selection(train_df)
     improved_decision_tree_classifier(train_df, test_df)
-
-
 
 
 if __name__ == "__main__":
