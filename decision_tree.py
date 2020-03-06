@@ -28,6 +28,7 @@ def decision_tree_classifier(train_df, test_df):
 
     training_scores = []
     validation_scores = []
+    training_logloss = []
     validation_logloss = []
 
     #create decision tree classifier
@@ -45,6 +46,7 @@ def decision_tree_classifier(train_df, test_df):
         y_pred = decision_tree.predict(X_validation)
         y_pred1 = decision_tree.predict_proba(X_validation)
         training_scores.append(decision_tree.score(X_train, y_train))
+        training_logloss.append(decision_tree.score(X_train, y_train))
         validation_scores.append(metrics.accuracy_score(y_validation, y_pred))
         validation_logloss.append(log_loss(y_validation, y_pred1))
 
@@ -53,7 +55,8 @@ def decision_tree_classifier(train_df, test_df):
     print('Scores from each Iteration: ', validation_scores)
     print('Average k-fold on training: ', np.mean(training_scores))
     print('Average k-fold on testing: ', np.mean(validation_scores))
-    print('Average k-fold on validation using logloss: ', np.mean(validation_logloss))
+    print('Average k-fold on training using logloss: ', np.mean(validation_logloss))
+    print('Average k-fold on validation using logloss: ', np.mean(training_logloss))
 
     #train classifier
     decision_tree = decision_tree.fit(x,y)
@@ -98,9 +101,10 @@ def improved_decision_tree_classifier(train_df, test_df):
                                    min_samples_split= 10,
                                    min_samples_leaf= 5,
                                    )
-
+    
     training_scores = []
     validation_scores = []
+    training_logloss = []
     validation_logloss = []
 
    #cross validation 
@@ -114,6 +118,7 @@ def improved_decision_tree_classifier(train_df, test_df):
         y_pred = decision_tree.predict(X_validation)
         y_pred1 = decision_tree.predict_proba(X_validation)
         training_scores.append(decision_tree.score(X_train, y_train))
+        training_logloss.append(decision_tree.score(X_train, y_train))
         validation_scores.append(metrics.accuracy_score(y_validation, y_pred))
         validation_logloss.append(log_loss(y_validation, y_pred1))
     
@@ -122,7 +127,10 @@ def improved_decision_tree_classifier(train_df, test_df):
     print('Scores from each Iteration: ', validation_scores)
     print('Improved Average k-fold on training: ', np.mean(training_scores))
     print('Improved Average k-fold on validation: ', np.mean(validation_scores))
-    print('Improved Average k-fold on validation using logloss: ', np.mean(validation_logloss))
+    print('Improved Average k-fold on training using logloss: ', np.mean(validation_logloss))
+    print('Improved Average k-fold on validation using logloss: ', np.mean(training_logloss))
+
+
 
     #retrain classifier on the whole dataset
     decision_tree = decision_tree.fit(x,y)
@@ -183,6 +191,14 @@ def main():
 
     train_df = pd.read_json('new_train.json.zip')
     test_df = pd.read_json('new_test.json.zip')
+
+    # train_df = pd.read_json('train.json.zip')
+    # test_df = pd.read_json('test.json.zip')
+
+
+    # train_df = data_preprocessing(train_df)
+    # train_df = additionalFeatures(train_df)
+    # test_df = additionalFeatures(test_df)
 
     feature_Selection(train_df)
     decision_tree_classifier(train_df, test_df)
