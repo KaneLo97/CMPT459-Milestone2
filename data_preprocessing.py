@@ -17,7 +17,7 @@ import scipy
 
 
 def data_preprocessing(train_df):
- 
+    my_stop_words = list(stopwords.words('english'))
     #remove outliers
     train_df = train_df[train_df['bathrooms'] != 10.0]
     train_df = train_df[(train_df['latitude'] != 34.0126) | (train_df['latitude'] != 0)]
@@ -208,9 +208,9 @@ def main():
     train_df = data_preprocessing(train_df)
     train_df = additionalFeatures(train_df)
     test_df = additionalFeatures(test_df)
-   
 
-
+    train_df.to_json("new_train.json.zip", compression='zip')
+    test_df.to_json("new_test.json.zip", compression='zip')
 
 
 
