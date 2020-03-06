@@ -4,213 +4,187 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from sklearn.feature_extraction.text import CountVectorizer
-import sys
-from sklearn.feature_extraction.text import TfidfTransformer
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import sent_tokenize, word_tokenize
-import statistics
-import re
-import scipy
+
+from sklearn.model_selection import KFold
+from sklearn.tree import DecisionTreeClassifier # Import Decision Tree Classifier
+from sklearn.metrics import accuracy_score #Import scikit-learn metrics module for accuracy calculation
+from sklearn.metrics import log_loss
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.model_selection import GridSearchCV
 
 
-def data_preprocessing(train_df):
-    my_stop_words = list(stopwords.words('english'))
-    #remove outliers
-    train_df = train_df[train_df['bathrooms'] != 10.0]
-    train_df = train_df[(train_df['latitude'] != 34.0126) | (train_df['latitude'] != 0)]
-    train_df = train_df[(train_df['longitude'] > -80) & (train_df['longitude'] < -60)]
-    train_df = train_df[train_df['price'] <1000000]
+def decision_tree_classifier(train_df, test_df):
+    feature_cols = ['price', 'latitude', 'mean_des_tdidf', 
+            'length_description', 'created_hour', 'closest_hospital',
+            'closest_station', 'mean_feature_tdidf', 'created_day',
+            'photos_num']
+    x = train_df[feature_cols] # Features
+    y = train_df.interest_level # Target variable
+    X_test = test_df[feature_cols]
 
-    train_df = train_df.apply(lambda row: missing_addr(row),axis=1)
+    training_scores = []
+    validation_scores = []
+    validation_logloss = []
 
-    #remove records with missing street and display address
-    train_df = train_df[(train_df['display_address'].apply(len)!= 0) & (train_df['street_address'].apply(len) != 0)]
-
-    train_df = missing_features(train_df, my_stop_words)
-
-    # Apply the function to remove tags
-    train_df['description'] = train_df.apply(lambda row: remove_tags(row['description']),axis=1)
+    #create decision tree classifier
+    # decision_tree = DecisionTreeClassifier(min_samples_split= 20, min_samples_leaf= 20)
+    decision_tree = DecisionTreeClassifier()
     
-    return train_df
-#
-def missing_addr(row):
+    #cross validation 
+    kf = KFold(n_splits=5, shuffle = False)
+    X = np.array(x)
+    y = np.array(y)
+    for train_index, test_index in kf.split(X):
+        X_train, X_validation = X[train_index], X[test_index]
+        y_train, y_validation = y[train_index], y[test_index]
+        decision_tree = decision_tree.fit(X_train,y_train)
+        y_pred = decision_tree.predict(X_validation)
+        y_pred1 = decision_tree.predict_proba(X_validation)
+        training_scores.append(decision_tree.score(X_train, y_train))
+        validation_scores.append(accuracy_score(y_validation, y_pred))
+        validation_logloss.append(log_loss(y_validation, y_pred1))
 
-    if len(row.display_address) == 0:
-        row.display_address = row.street_address
-    return row
+    #check overfitting and performance
+    print('Scores from each Iteration: ', training_scores)
+    print('Scores from each Iteration: ', validation_scores)
+    print('Average k-fold on training: ', np.mean(training_scores))
+    print('Average k-fold on testing: ', np.mean(validation_scores))
+    print('Average k-fold on validation using logloss: ', np.mean(validation_logloss))
 
-def missing_features(train_df, my_stop_words):
-    descriptions = train_df
-    features = train_df
+    #train classifier
+    decision_tree = decision_tree.fit(x,y)
 
-    # # # # # # # # # # # # # # # # # # # # # # # #
-    # Fill in Missing Features using Description  #
-    # # # # # # # # # # # # # # # # # # # # # # # #
+    y_pred = decision_tree.predict_proba(X_test)
 
-    mask = features['features'].apply(len) == 0
-    missing_features_df = features[mask]
+    submission = pd.DataFrame({
+        "listing_id": test_df["listing_id"],
+        "high": y_pred[:,0],
+        "medium":y_pred[:,1],
+        "low":y_pred[:,2]
+    })
 
-    # Build a list of features in existing data
-    df_has_features = features[~mask]
-    all_lists = df_has_features['features'].to_numpy()
-    feature_list = set()
-    for each_list in all_lists:
-        for elem in each_list:
-            feature_list.add(elem)
+    titles_columns=["listing_id","high","medium","low"]
+    submission=submission.reindex(columns=titles_columns)
+    submission.to_csv('initial_decision_tree_submission.csv', index=False)
 
-    # Apply the function to fill missing features
-    missing_features_df['features'] = missing_features_df.apply(lambda row: fill_features(row['description'],feature_list),axis=1)
+def improved_decision_tree_classifier(train_df, test_df):
+    feature_cols = ['bedrooms','bathrooms','price', 'latitude', 'mean_des_tdidf', 'length_description', 'created_hour', 'closest_station', 'closest_hospital', 'mean_feature_tdidf', 'created_day','photos_num']
+    x = train_df[feature_cols] # Features
+    y = train_df.interest_level # Target variable
+    X_test = test_df[feature_cols]
 
-    # Update the train_df with with empty 'features' columns
-    train_df[train_df['features'].apply(len) == 0] = missing_features_df
+    # X_train, X_validation, y_train, y_validation = train_test_split(x, y, test_size=0.3, random_state=1) # 70% training and 30% test
 
-    return train_df
+    # Parameter Tuning
+    # max_depth = [3,5,3.5, 4, 4.5,5,5.5, 6, 6.5,7,8,9,10]
+    # min_samples_split = [10,20,25,30,35,40]
+    # min_samples_leaf = [10,20,25,30,35,40]
+    # parameters = [{'max_depth':max_depth,'min_samples_split':min_samples_split,'min_samples_leaf':min_samples_leaf}]
+    # grid_search = GridSearchCV(estimator=decision_tree, param_grid=parameters, scoring ='accuracy',cv=5,n_jobs=-1)
+    # grid_search = grid_search.fit(x,y)
 
-# Parse the description column and find matching features
-def fill_features(row, feature_list):
-    result_list = []
-    for feature in feature_list:
-        if feature in row:
-            result_list.append(feature)
-    return result_list
+    # best_accuracy = grid_search.best_score_
+    # print(best_accuracy)
+    # # best_accuracy
+    # opt_param = grid_search.best_params_
+    # print (opt_param )
+     #create decision tree classifier
+    decision_tree = DecisionTreeClassifier(criterion='gini',
+                                   max_depth = 4.0,
+                                   min_samples_split= 10,
+                                   min_samples_leaf= 5,
+                                   )
 
-def tf_idf(df, my_stop_words):
-    # # # # # # # # # # # # # # # # #
-    # Implement Feature Extraction  #
-    # # # # # # # # # # # # # # # # #
+    training_scores = []
+    validation_scores = []
+    validation_logloss = []
 
-    # Text Extraction for 'features' column
-    features = df['features'].to_numpy()
-    vectorizer_fea = CountVectorizer(stop_words=my_stop_words)
-    corpus_fea = [" ".join(x) for x in features]
-    X_fea_counts = vectorizer_fea.fit_transform(corpus_fea)
-
-    # To TfIDF
-    transformer = TfidfTransformer(smooth_idf=False)
-    tfidf = transformer.fit_transform(X_fea_counts)
-
-    # Add the Mean Tf/Idf for each row in the database for Features
-    num_of_rows = tfidf.shape[0]
-    mean_val_list = []
-    for row in range(num_of_rows):
-        elem_list = tfidf[row].toarray()[0]
-        row_vals = []
-        mean_val = 0
-        for elem in elem_list:
-            if (float(elem) != float(0.0)):
-                row_vals.append(float(elem))
-        if len(row_vals) > 0:
-            mean_val = statistics.mean(row_vals)
-            mean_val_list.append(mean_val)
-        else:
-            mean_val_list.append(0.0)
-
-    df['mean_feature_tdidf'] = mean_val_list
-
-    # Text Extraction for 'description' column
-    descriptions = df['description'].to_numpy()
-    vectorizer_des = CountVectorizer(stop_words=my_stop_words)
-    corpus_des = descriptions
-    X_des_counts = vectorizer_des.fit_transform(corpus_des)
-    # To TfIDF
-    des_transformer = TfidfTransformer(smooth_idf=False)
-    des_tfidf = des_transformer.fit_transform(X_des_counts)
-
-
-    # # Add the Mean Tf/Idf for each row in the database for Description
-    num_of_rows = des_tfidf.shape[0]
-    mean_val_list = []
-    for row in range(num_of_rows):
-        elem_list = des_tfidf[row].toarray()[0]
-        row_vals = []
-        mean_val = 0
-        for elem in elem_list:
-            if (float(elem) != float(0.0)):
-                row_vals.append(float(elem))
-        if len(row_vals) > 0:
-            mean_val = statistics.mean(row_vals)
-            mean_val_list.append(mean_val)
-        else:
-            mean_val_list.append(0.0)
-
-    df['mean_des_tdidf'] = mean_val_list
-
-    # print(train_df)
-
-    return df
-
-
-# # # # # # # # # # # # # # # # #
-# Remove HTML tags such as br   #
-# # # # # # # # # # # # # # # # #
-TAG_RE = re.compile(r'<[^>]+>')
-def remove_tags(text):
-    return TAG_RE.sub('', text)
-
-def additionalFeatures(df):
-    station = pd.read_csv("nyc-transit-data.csv")
-    station = station.filter(['Station Name', 'Station Latitude', 'Station Longitude'])
-    station.drop_duplicates(inplace=True)
-
-    # Clean up code for hospital data
-    point_of_intrest = pd.read_csv("Point_Of_Interest.csv")
-    point_of_intrest =  point_of_intrest[point_of_intrest['NAME'].str.contains("HOSPITAL")]
-    point_of_intrest['the_geom'] = point_of_intrest['the_geom'].str.split(' ')
-    point_of_intrest['latitude'] = point_of_intrest['the_geom'].apply(lambda x: x[1])
-    point_of_intrest['longitude'] = point_of_intrest['the_geom'].apply(lambda x: x[0])
-    # print(point_of_intrest['latitude'])
-    # print(point_of_intrest['longitude'])
-
-    # Get distance to hospitals
-    mat_hospital = scipy.spatial.distance.cdist(df[['latitude','longitude']],
-                                point_of_intrest[['latitude','longitude']], metric='euclidean')
-
-    min_distance_to_hospital = []
-    for listing in mat_hospital:
-        min_distance_to_hospital.append(min(listing))
-
-    df['closest_hospital'] = min_distance_to_hospital
-
-    # Get distance to subway stations
-    mat = scipy.spatial.distance.cdist(df[['latitude','longitude']],
-                                station[['Station Latitude','Station Longitude']], metric='euclidean')
-
-    min_distance_to_station = []
-
-    for listing in mat:
-        min_distance_to_station.append(min(listing))
-
-    df['closest_station'] = min_distance_to_station
-
-    df['number_features'] = df['features'].apply(len)
-    df['length_description'] = df['description'].apply(len)
-    df['created'] = pd.to_datetime(df['created'])
-    df['created_hour'] = df["created"].dt.hour
-    df["created_year"] = df["created"].dt.year
-    df["created_month"] = df["created"].dt.month
-    df["created_day"] = df["created"].dt.day
-    df['photos_num'] = df['photos'].apply(len)
+   #cross validation 
+    kf = KFold(n_splits=5, shuffle = False)
+    X = np.array(x)
+    y = np.array(y)
+    for train_index, test_index in kf.split(X):
+        X_train, X_validation = X[train_index], X[test_index]
+        y_train, y_validation = y[train_index], y[test_index]
+        decision_tree = decision_tree.fit(X_train,y_train)
+        y_pred = decision_tree.predict(X_validation)
+        y_pred1 = decision_tree.predict_proba(X_validation)
+        training_scores.append(decision_tree.score(X_train, y_train))
+        validation_scores.append(accuracy_score(y_validation, y_pred))
+        validation_logloss.append(log_loss(y_validation, y_pred1))
     
-    my_stop_words = list(stopwords.words('english'))
-    df= tf_idf(df, my_stop_words)
+    #check overfitting
+    print('Scores from each Iteration: ', training_scores)
+    print('Scores from each Iteration: ', validation_scores)
+    print('Improved Average k-fold on training: ', np.mean(training_scores))
+    print('Improved Average k-fold on validation: ', np.mean(validation_scores))
+    print('Improved Average k-fold on validation using logloss: ', np.mean(validation_logloss))
 
+    #retrain classifier on the whole dataset
+    decision_tree = decision_tree.fit(x,y)
 
-    return df
+    y_pred = decision_tree.predict_proba(X_test)
+
+    submission = pd.DataFrame({
+        "listing_id": test_df["listing_id"],
+        "high": y_pred[:,0],
+        "medium":y_pred[:,1],
+        "low":y_pred[:,2]
+    })
+
+    titles_columns=["listing_id","high","medium","low"]
+    submission=submission.reindex(columns=titles_columns)
+    submission.to_csv('improved_decision_tree_submission.csv', index=False)
+
+def feature_Selection(train_df):
+    cols = ['bedrooms', 'bathrooms', 'latitude', 
+        'price', 'number_features', 
+        'length_description', 'closest_station', 'closest_hospital',
+        'created_month', 'created_day', 'created_hour', 'photos_num', 
+        'mean_des_tdidf', 'mean_feature_tdidf']
+
+    X = train_df[cols]
+    y = train_df['interest_level']
+    # Performing feature selection
+    model = ExtraTreesClassifier()
+    model.fit(X,y)
+    #print(model.feature_importances_) #use inbuilt class feature_importances of tree based classifiers
+    #plot graph of feature importances for better visualization
+    feat_importances = pd.Series(model.feature_importances_, index=X.columns)
+    feat_importances.nlargest(10).plot(kind='barh')
+    # plt.show()
+    #print(feat_importances.nlargest(10))
+
+def new_feature_Selection(train_df):
+    cols = ['bedrooms', 'bathrooms', 'latitude', 
+        'price', 'number_features', 
+        'length_description', 'closest_station', 'closest_hospital',
+        'created_month', 'created_day', 'created_hour', 'photos_num', 
+        'mean_des_tdidf', 'mean_feature_tdidf']
+
+    X = train_df[cols]
+    y = train_df['interest_level']
+    # Performing feature selection
+    model = ExtraTreesClassifier()
+    model.fit(X,y)
+    #print(model.feature_importances_) #use inbuilt class feature_importances of tree based classifiers
+
+    #plot graph of feature importances for better visualization
+    feat_importances = pd.Series(model.feature_importances_, index=X.columns)
+    feat_importances.nlargest(14).plot(kind='barh')
+    # plt.show()
+    # print(feat_importances.nlargest(14))
 
 def main():
 
-    train_df = pd.read_json('train.json.zip')
-    test_df = pd.read_json('test.json.zip')
+    train_df = pd.read_json('new_train.json.zip')
+    test_df = pd.read_json('new_test.json.zip')
 
-    train_df = data_preprocessing(train_df)
-    train_df = additionalFeatures(train_df)
-    test_df = additionalFeatures(test_df)
+    feature_Selection(train_df)
+    decision_tree_classifier(train_df, test_df)
 
-    train_df.to_json("new_train.json.zip", compression='zip')
-    test_df.to_json("new_test.json.zip", compression='zip')
+    new_feature_Selection(train_df)
+    improved_decision_tree_classifier(train_df, test_df)
 
 
 
