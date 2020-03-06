@@ -55,8 +55,8 @@ def decision_tree_classifier(train_df, test_df):
     print('Scores from each Iteration: ', validation_scores)
     print('Average k-fold on training: ', np.mean(training_scores))
     print('Average k-fold on testing: ', np.mean(validation_scores))
-    print('Average k-fold on training using logloss: ', np.mean(training_logloss))
-    print('Average k-fold on validation using logloss: ', np.mean(validation_logloss))
+    print('Average k-fold on training using logloss: ', np.mean(validation_logloss))
+    print('Average k-fold on validation using logloss: ', np.mean(training_logloss))
 
     #train classifier
     decision_tree = decision_tree.fit(x,y)
@@ -127,8 +127,10 @@ def improved_decision_tree_classifier(train_df, test_df):
     print('Scores from each Iteration: ', validation_scores)
     print('Improved Average k-fold on training: ', np.mean(training_scores))
     print('Improved Average k-fold on validation: ', np.mean(validation_scores))
-    print('Improved Average k-fold on training using logloss: ', np.mean(training_logloss))
-    print('Improved Average k-fold on validation using logloss: ', np.mean(validation_logloss))
+    print('Improved Average k-fold on training using logloss: ', np.mean(validation_logloss))
+    print('Improved Average k-fold on validation using logloss: ', np.mean(training_logloss))
+
+
 
     #retrain classifier on the whole dataset
     decision_tree = decision_tree.fit(x,y)
@@ -193,6 +195,10 @@ def main():
     # train_df = pd.read_json('train.json.zip')
     # test_df = pd.read_json('test.json.zip')
 
+
+    # train_df = data_preprocessing(train_df)
+    # train_df = additionalFeatures(train_df)
+    # test_df = additionalFeatures(test_df)
 
     feature_Selection(train_df)
     decision_tree_classifier(train_df, test_df)
